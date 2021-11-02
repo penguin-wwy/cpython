@@ -4846,8 +4846,42 @@ check_eval_breaker:
         TARGET(BINARY_OP) {
             PyObject *right = POP();
             PyObject *left = TOP();
-            PyObject *res = _PyNumber_BinaryOp(left, right, oparg * NB_SCALE, 
-                                               nb_names[oparg]);
+            PyObject *res = _PyNumber_BinaryOp(left, right, oparg * NB_SCALE, nb_names[oparg]).result;
+            Py_DECREF(left);
+            Py_DECREF(right);
+            SET_TOP(res);
+            if (res == NULL) {
+                goto error;
+            }
+            DISPATCH();
+        }
+
+        TARGET(BINARY_OP_ADAPTIVE) {
+            PyObject *right = POP();
+            PyObject *left = TOP();
+            PyTypeObject *ltp = Py_TYPE(left);
+            PyTypeObject *rtp = Py_TYPE(right);
+            SpecializedCacheEntry *cache = GET_CACHE();
+            int success = 1;
+            if (cache[-1].obj.obj != (PyObject *) ltp || cache[-3].tp_cache.o1_type_version != ltp->tp_version_tag) {
+                success = 0;
+            }
+            if (cache[-2].obj.obj != (PyObject *) rtp || cache[-3].tp_cache.o2_type_version != rtp->tp_version_tag) {
+                success = 0;
+            }
+            PyObject *res = NULL;
+            if (success) {
+                res = cache[-4].bin_fn.f(left, right);
+            } else {
+                struct PowerResult pr = _PyNumber_BinaryOp(left, right, oparg * NB_SCALE,
+                                                           nb_names[oparg]);
+                res = pr.result;
+                cache[-1].obj.obj = (PyObject *) ltp;
+                cache[-3].tp_cache.o1_type_version = ltp->tp_version_tag;
+                cache[-2].obj.obj = (PyObject *) rtp;
+                cache[-3].tp_cache.o2_type_version = rtp->tp_version_tag;
+                cache[-4].bin_fn.f = pr.func;
+            }
             Py_DECREF(left);
             Py_DECREF(right);
             SET_TOP(res);

@@ -239,6 +239,7 @@ static uint8_t adaptive_opcodes[256] = {
     [BINARY_SUBSCR] = BINARY_SUBSCR_ADAPTIVE,
     [CALL_FUNCTION] = CALL_FUNCTION_ADAPTIVE,
     [STORE_ATTR] = STORE_ATTR_ADAPTIVE,
+    [BINARY_OP] = BINARY_OP_ADAPTIVE,
 };
 
 /* The number of cache entries required for a "family" of instructions. */
@@ -251,6 +252,7 @@ static uint8_t cache_requirements[256] = {
     [BINARY_SUBSCR] = 0,
     [CALL_FUNCTION] = 2, /* _PyAdaptiveEntry and _PyObjectCache/_PyCallCache */
     [STORE_ATTR] = 2, /* _PyAdaptiveEntry and _PyAttrCache */
+    [BINARY_OP] = 5, /* _PyAdaptiveEntry, _PyObjectCache, _PyObjectCache, _PyTypeVersionCache and _PyBinaryFuncCache*/
 };
 
 /* Return the oparg for the cache_offset and instruction index.

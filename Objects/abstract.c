@@ -854,7 +854,7 @@ PyNumber_Check(PyObject *o)
       Py_TYPE(v)
  */
 
-static PyObject *
+static struct PowerResult
 binary_op1(PyObject *v, PyObject *w, const int op_slot
 #ifndef NDEBUG
            , const char *op_name
@@ -884,15 +884,16 @@ binary_op1(PyObject *v, PyObject *w, const int op_slot
         PyObject *x;
         if (slotw && PyType_IsSubtype(Py_TYPE(w), Py_TYPE(v))) {
             x = slotw(v, w);
-            if (x != Py_NotImplemented)
-                return x;
+            if (x != Py_NotImplemented) {
+                return (struct PowerResult) {.result = x, slotw};
+            }
             Py_DECREF(x); /* can't do it */
             slotw = NULL;
         }
         x = slotv(v, w);
         assert(_Py_CheckSlotResult(v, op_name, x != NULL));
         if (x != Py_NotImplemented) {
-            return x;
+            return (struct PowerResult) {.result = x, slotv};
         }
         Py_DECREF(x); /* can't do it */
     }
@@ -900,17 +901,27 @@ binary_op1(PyObject *v, PyObject *w, const int op_slot
         PyObject *x = slotw(v, w);
         assert(_Py_CheckSlotResult(w, op_name, x != NULL));
         if (x != Py_NotImplemented) {
-            return x;
+            return (struct PowerResult) {.result = x, slotw};
         }
         Py_DECREF(x); /* can't do it */
     }
-    Py_RETURN_NOTIMPLEMENTED;
+    return (struct PowerResult) {.result = Py_NewRef(Py_NotImplemented), NULL};
 }
 
 #ifdef NDEBUG
-#  define BINARY_OP1(v, w, op_slot, op_name) binary_op1(v, w, op_slot)
+#  define BINARY_OP1(v, w, op_slot, op_name) binary_op1(v, w, op_slot).result
 #else
-#  define BINARY_OP1(v, w, op_slot, op_name) binary_op1(v, w, op_slot, op_name)
+#  define BINARY_OP1(v, w, op_slot, op_name) binary_op1(v, w, op_slot, op_name).result
+#endif
+
+#ifdef NDEBUG
+#  define CALL_BINARY_OP1(v, w, op_slot, op_name) \
+    struct PowerResult _pr = binary_op1(v, w, op_slot); \
+    PyObject *result = *(PyObject **) &_pr
+#else
+#  define CALL_BINARY_OP1(v, w, op_slot, op_name) \
+    struct PowerResult _pr = binary_op1(v, w, op_slot, op_name); \
+    PyObject *result = *(PyObject **) &_pr
 #endif
 
 static PyObject *
@@ -925,11 +936,11 @@ binop_type_error(PyObject *v, PyObject *w, const char *op_name)
     return NULL;
 }
 
-PyObject *
+struct PowerResult
 _PyNumber_BinaryOp(PyObject *v, PyObject *w, const int op_slot,
                    const char *op_name)
 {
-    PyObject *result = BINARY_OP1(v, w, op_slot, op_name);
+    CALL_BINARY_OP1(v, w, op_slot, op_name);
     if (result == Py_NotImplemented) {
         Py_DECREF(result);
 
@@ -944,11 +955,11 @@ _PyNumber_BinaryOp(PyObject *v, PyObject *w, const int op_slot,
                 op_name,
                 Py_TYPE(v)->tp_name,
                 Py_TYPE(w)->tp_name);
-            return NULL;
+            return (struct PowerResult) {NULL, NULL};
         }
-        return binop_type_error(v, w, op_name);
+        return (struct PowerResult) {binop_type_error(v, w, op_name), NULL};
     }
-    return result;
+    return _pr;
 }
 
 
@@ -1056,7 +1067,7 @@ ternary_op(PyObject *v,
 #define BINARY_FUNC(func, op, op_name) \
     PyObject * \
     func(PyObject *v, PyObject *w) { \
-        return _PyNumber_BinaryOp(v, w, NB_SLOT(op), op_name); \
+        return _PyNumber_BinaryOp(v, w, NB_SLOT(op), op_name).result; \
     }
 
 BINARY_FUNC(PyNumber_Or, nb_or, "|")
@@ -1127,25 +1138,25 @@ PyNumber_Multiply(PyObject *v, PyObject *w)
 PyObject *
 PyNumber_MatrixMultiply(PyObject *v, PyObject *w)
 {
-    return _PyNumber_BinaryOp(v, w, NB_SLOT(nb_matrix_multiply), "@");
+    return _PyNumber_BinaryOp(v, w, NB_SLOT(nb_matrix_multiply), "@").result;
 }
 
 PyObject *
 PyNumber_FloorDivide(PyObject *v, PyObject *w)
 {
-    return _PyNumber_BinaryOp(v, w, NB_SLOT(nb_floor_divide), "//");
+    return _PyNumber_BinaryOp(v, w, NB_SLOT(nb_floor_divide), "//").result;
 }
 
 PyObject *
 PyNumber_TrueDivide(PyObject *v, PyObject *w)
 {
-    return _PyNumber_BinaryOp(v, w, NB_SLOT(nb_true_divide), "/");
+    return _PyNumber_BinaryOp(v, w, NB_SLOT(nb_true_divide), "/").result;
 }
 
 PyObject *
 PyNumber_Remainder(PyObject *v, PyObject *w)
 {
-    return _PyNumber_BinaryOp(v, w, NB_SLOT(nb_remainder), "%");
+    return _PyNumber_BinaryOp(v, w, NB_SLOT(nb_remainder), "%").result;
 }
 
 PyObject *
@@ -1189,11 +1200,7 @@ binary_iop1(PyObject *v, PyObject *w, const int iop_slot, const int op_slot
             Py_DECREF(x);
         }
     }
-#ifdef NDEBUG
-    return binary_op1(v, w, op_slot);
-#else
-    return binary_op1(v, w, op_slot, op_name);
-#endif
+    return BINARY_OP1(v, w, op_slot, op_name);
 }
 
 #ifdef NDEBUG

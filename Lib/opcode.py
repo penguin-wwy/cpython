@@ -228,6 +228,7 @@ _nb_binop_slots = [
 ]
 
 _specialized_instructions = [
+    "BINARY_OP_ADAPTIVE",
     "BINARY_ADD_ADAPTIVE",
     "BINARY_ADD_INT",
     "BINARY_ADD_FLOAT",

@@ -41,6 +41,15 @@ typedef struct {
     uint16_t defaults_len;
 } _PyCallCache;
 
+typedef struct {
+    uint32_t o1_type_version;
+    uint32_t o2_type_version;
+} _PyTypeVersionCache;
+
+typedef struct {
+    binaryfunc f;
+} _PyBinaryFuncCache;
+
 /* Add specialized versions of entries to this union.
  *
  * Do not break the invariant: sizeof(SpecializedCacheEntry) == 8
@@ -58,6 +67,8 @@ typedef union {
     _PyLoadGlobalCache load_global;
     _PyObjectCache obj;
     _PyCallCache call;
+    _PyTypeVersionCache tp_cache;
+    _PyBinaryFuncCache bin_fn;
 } SpecializedCacheEntry;
 
 #define INSTRUCTIONS_PER_ENTRY (sizeof(SpecializedCacheEntry)/sizeof(_Py_CODEUNIT))
