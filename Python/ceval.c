@@ -3705,6 +3705,9 @@ check_eval_breaker:
             assert(tp->tp_inline_values_offset > 0);
             PyDictValues *values = *(PyDictValues **)(((char *)owner) + tp->tp_inline_values_offset);
             DEOPT_IF(values == NULL, STORE_ATTR);
+            if (tp->tp_flags & Py_TPFLAGS_HAVE_GC) {
+                tstate->interp->gc.generations[0].count ++;
+            }
             STAT_INC(STORE_ATTR, hit);
             int index = cache0->index;
             STACK_SHRINK(1);
@@ -3742,6 +3745,9 @@ check_eval_breaker:
             DEOPT_IF(ep->me_key != name, STORE_ATTR);
             PyObject *old_value = ep->me_value;
             DEOPT_IF(old_value == NULL, STORE_ATTR);
+            if (tp->tp_flags & Py_TPFLAGS_HAVE_GC) {
+                tstate->interp->gc.generations[0].count ++;
+            }
             STAT_INC(STORE_ATTR, hit);
             STACK_SHRINK(1);
             PyObject *value = POP();
@@ -3766,6 +3772,9 @@ check_eval_breaker:
             _PyAttrCache *cache1 = &caches[-1].attr;
             assert(cache1->tp_version != 0);
             DEOPT_IF(tp->tp_version_tag != cache1->tp_version, STORE_ATTR);
+            if (tp->tp_flags & Py_TPFLAGS_HAVE_GC) {
+                tstate->interp->gc.generations[0].count ++;
+            }
             char *addr = (char *)owner + cache0->index;
             STAT_INC(STORE_ATTR, hit);
             STACK_SHRINK(1);

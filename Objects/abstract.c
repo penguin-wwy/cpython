@@ -205,6 +205,10 @@ PyObject_SetItem(PyObject *o, PyObject *key, PyObject *value)
         return -1;
     }
 
+    if (Py_TYPE(value)->tp_flags & Py_TPFLAGS_HAVE_GC) {
+        _PyThreadState_GET()->interp->gc.generations[0].count ++;
+    }
+
     PyMappingMethods *m = Py_TYPE(o)->tp_as_mapping;
     if (m && m->mp_ass_subscript) {
         int res = m->mp_ass_subscript(o, key, value);

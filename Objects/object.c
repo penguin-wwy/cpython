@@ -1024,6 +1024,10 @@ PyObject_SetAttr(PyObject *v, PyObject *name, PyObject *value)
     PyTypeObject *tp = Py_TYPE(v);
     int err;
 
+    if (value != NULL && (Py_TYPE(value)->tp_flags & Py_TPFLAGS_HAVE_GC)) {
+        _PyThreadState_GET()->interp->gc.generations[0].count ++;
+    }
+
     if (!PyUnicode_Check(name)) {
         PyErr_Format(PyExc_TypeError,
                      "attribute name must be string, not '%.200s'",

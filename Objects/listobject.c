@@ -323,6 +323,9 @@ app1(PyListObject *self, PyObject *v)
 int
 PyList_Append(PyObject *op, PyObject *newitem)
 {
+    if (Py_TYPE(newitem)->tp_flags & Py_TPFLAGS_HAVE_GC) {
+        _PyThreadState_GET()->interp->gc.generations[0].count ++;
+    }
     if (PyList_Check(op) && (newitem != NULL))
         return app1((PyListObject *)op, newitem);
     PyErr_BadInternalCall();
