@@ -1025,7 +1025,9 @@ PyObject_SetAttr(PyObject *v, PyObject *name, PyObject *value)
     int err;
 
     if (value != NULL && (Py_TYPE(value)->tp_flags & Py_TPFLAGS_HAVE_GC)) {
-        _PyThreadState_GET()->interp->gc.generations[0].count ++;
+        struct gc_generation *generation = &_PyThreadState_GET()->interp->gc.generations[0];
+        if (generation->ref_count < 0xFFFF)
+            generation->ref_count ++;
     }
 
     if (!PyUnicode_Check(name)) {

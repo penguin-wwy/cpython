@@ -113,8 +113,9 @@ typedef struct {
 struct gc_generation {
     PyGC_Head head;
     int threshold; /* collection threshold */
-    int count; /* count of allocations or collections of younger
+    uint16_t count; /* count of allocations or collections of younger
                   generations */
+    uint16_t ref_count;
 };
 
 /* Running stats per generation */
@@ -159,6 +160,8 @@ struct _gc_runtime_state {
        collections, and are awaiting to undergo a full collection for
        the first time. */
     Py_ssize_t long_lived_pending;
+
+    int max_count;
 };
 
 extern void _PyGC_InitState(struct _gc_runtime_state *);

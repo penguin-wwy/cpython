@@ -157,6 +157,7 @@ _PyGC_InitState(GCState *gcstate)
            (uintptr_t)&gcstate->permanent_generation.head}, 0, 0
     };
     gcstate->permanent_generation = permanent_generation;
+    gcstate->max_count = 0;
 }
 
 
@@ -1219,8 +1220,11 @@ gc_collect_main(PyThreadState *tstate, int generation,
     /* update collection and allocation counters */
     if (generation+1 < NUM_GENERATIONS)
         gcstate->generations[generation+1].count += 1;
-    for (i = 0; i <= generation; i++)
+    for (i = 0; i <= generation; i++) {
         gcstate->generations[i].count = 0;
+        gcstate->generations[i].ref_count = 0;
+    }
+    gcstate->max_count = 0;
 
     /* merge younger generations with one we are currently collecting */
     for (i = 0; i < generation; i++) {
@@ -1424,7 +1428,7 @@ gc_collect_generations(PyThreadState *tstate)
      * generations younger than it will be collected. */
     Py_ssize_t n = 0;
     for (int i = NUM_GENERATIONS-1; i >= 0; i--) {
-        if (gcstate->generations[i].count > gcstate->generations[i].threshold) {
+        if ((gcstate->generations[i].count + gcstate->generations[i].ref_count) > gcstate->generations[i].threshold) {
             /* Avoid quadratic performance degradation in number
                of tracked objects (see also issue #4074):
 
@@ -1644,10 +1648,14 @@ gc_get_count_impl(PyObject *module)
 /*[clinic end generated code: output=354012e67b16398f input=a392794a08251751]*/
 {
     GCState *gcstate = get_gc_state();
-    return Py_BuildValue("(iii)",
+    return Py_BuildValue("(iiiiiii)",
                          gcstate->generations[0].count,
+                         gcstate->generations[0].ref_count,
                          gcstate->generations[1].count,
-                         gcstate->generations[2].count);
+                         gcstate->generations[1].ref_count,
+                         gcstate->generations[2].count,
+                         gcstate->generations[2].ref_count,
+                         gcstate->max_count);
 }
 
 static int
@@ -1920,6 +1928,7 @@ gc_freeze_impl(PyObject *module)
     for (int i = 0; i < NUM_GENERATIONS; ++i) {
         gc_list_merge(GEN_HEAD(gcstate, i), &gcstate->permanent_generation.head);
         gcstate->generations[i].count = 0;
+        gcstate->generations[i].ref_count = 0;
     }
     Py_RETURN_NONE;
 }
@@ -2241,8 +2250,12 @@ _PyObject_GC_Link(PyObject *op)
     GCState *gcstate = &tstate->interp->gc;
     g->_gc_next = 0;
     g->_gc_prev = 0;
-    gcstate->generations[0].count++; /* number of allocated GC objects */
-    if (gcstate->generations[0].count > gcstate->generations[0].threshold &&
+    uint16_t alloc_count = ++gcstate->generations[0].count; /* number of allocated GC objects */
+    if (alloc_count > 700 && alloc_count > gcstate->max_count) {
+        gcstate->max_count = alloc_count;
+    }
+    int total_count = alloc_count + gcstate->generations[0].ref_count;
+    if (total_count > gcstate->generations[0].threshold &&
         gcstate->enabled &&
         gcstate->generations[0].threshold &&
         !gcstate->collecting &&

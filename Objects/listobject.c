@@ -325,7 +325,9 @@ int
 PyList_Append(PyObject *op, PyObject *newitem)
 {
     if (Py_TYPE(newitem)->tp_flags & Py_TPFLAGS_HAVE_GC) {
-        _PyThreadState_GET()->interp->gc.generations[0].count ++;
+        struct gc_generation *generation = &_PyThreadState_GET()->interp->gc.generations[0];
+        if (generation->ref_count < 0xFFFF)
+            generation->ref_count ++;
     }
     if (PyList_Check(op) && (newitem != NULL))
         return app1((PyListObject *)op, newitem);

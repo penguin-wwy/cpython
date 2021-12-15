@@ -3684,7 +3684,9 @@ check_eval_breaker:
             PyDictValues *values = *_PyObject_ValuesPointer(owner);
             DEOPT_IF(values == NULL, STORE_ATTR);
             if (tp->tp_flags & Py_TPFLAGS_HAVE_GC) {
-                tstate->interp->gc.generations[0].count ++;
+                struct gc_generation *generation = &tstate->interp->gc.generations[0];
+                if (generation->ref_count < 0xFFFF)
+                    generation->ref_count ++;
             }
             STAT_INC(STORE_ATTR, hit);
             int index = cache0->index;
@@ -3724,7 +3726,9 @@ check_eval_breaker:
             PyObject *old_value = ep->me_value;
             DEOPT_IF(old_value == NULL, STORE_ATTR);
             if (tp->tp_flags & Py_TPFLAGS_HAVE_GC) {
-                tstate->interp->gc.generations[0].count ++;
+                struct gc_generation *generation = &tstate->interp->gc.generations[0];
+                if (generation->ref_count < 0xFFFF)
+                    generation->ref_count ++;
             }
             STAT_INC(STORE_ATTR, hit);
             STACK_SHRINK(1);
@@ -3751,7 +3755,9 @@ check_eval_breaker:
             assert(cache1->tp_version != 0);
             DEOPT_IF(tp->tp_version_tag != cache1->tp_version, STORE_ATTR);
             if (tp->tp_flags & Py_TPFLAGS_HAVE_GC) {
-                tstate->interp->gc.generations[0].count ++;
+                struct gc_generation *generation = &tstate->interp->gc.generations[0];
+                if (generation->ref_count < 0xFFFF)
+                    generation->ref_count ++;
             }
             char *addr = (char *)owner + cache0->index;
             STAT_INC(STORE_ATTR, hit);

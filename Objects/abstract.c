@@ -206,7 +206,9 @@ PyObject_SetItem(PyObject *o, PyObject *key, PyObject *value)
     }
 
     if (Py_TYPE(value)->tp_flags & Py_TPFLAGS_HAVE_GC) {
-        _PyThreadState_GET()->interp->gc.generations[0].count ++;
+        struct gc_generation *generation = &_PyThreadState_GET()->interp->gc.generations[0];
+        if (generation->ref_count < 0xFFFF)
+            generation->ref_count ++;
     }
 
     PyMappingMethods *m = Py_TYPE(o)->tp_as_mapping;
