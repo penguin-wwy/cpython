@@ -141,10 +141,10 @@ extern "C" {
 #define CALL_NO_KW_ISINSTANCE            44
 #define CALL_NO_KW_PY_SIMPLE             45
 #define CALL_NO_KW_LIST_APPEND           46
-#define CALL_NO_KW_METHOD_DESCRIPTOR_O   47
+#define CALL_NO_KW_METHOD_DESCRIPTOR_NOARGS  47
 #define CALL_NO_KW_TYPE_1                48
 #define CALL_NO_KW_BUILTIN_CLASS_1       55
-#define CALL_NO_KW_METHOD_DESCRIPTOR_FAST  56
+#define CALL_NO_KW_METHOD_DESCRIPTOR_VARARGS  56
 #define JUMP_ABSOLUTE_QUICK              57
 #define LOAD_ATTR_ADAPTIVE               58
 #define LOAD_ATTR_INSTANCE_VALUE         59

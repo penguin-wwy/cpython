@@ -4935,14 +4935,14 @@ check_eval_breaker:
             DISPATCH();
         }
 
-        TARGET(CALL_NO_KW_METHOD_DESCRIPTOR_O) {
+        TARGET(CALL_NO_KW_METHOD_DESCRIPTOR_NOARGS) {
             assert(_Py_OPCODE(next_instr[-2]) == PRECALL_METHOD);
-            assert(GET_CACHE()->adaptive.original_oparg == 1);
+            assert(GET_CACHE()->adaptive.original_oparg == 0);
             DEOPT_IF(extra_args == 0, CALL_NO_KW);
             assert(extra_args == 1);
-            PyObject *callable = THIRD();
+            PyObject *callable = SECOND();
             DEOPT_IF(!Py_IS_TYPE(callable, &PyMethodDescr_Type), CALL_NO_KW);
-            DEOPT_IF(((PyMethodDescrObject *)callable)->d_method->ml_flags != METH_O, CALL_NO_KW);
+            DEOPT_IF(((PyMethodDescrObject *)callable)->d_method->ml_flags != METH_NOARGS, CALL_NO_KW);
             STAT_INC(CALL_NO_KW, hit);
             assert(extra_args == 1);
             extra_args = 0;
@@ -4953,13 +4953,11 @@ check_eval_breaker:
             if (_Py_EnterRecursiveCall(tstate, " while calling a Python object")) {
                 goto error;
             }
-            PyObject *arg = POP();
             PyObject *self = POP();
-            PyObject *res = cfunc(self, arg);
+            PyObject *res = cfunc(self, NULL);
             _Py_LeaveRecursiveCall(tstate);
             assert((res != NULL) ^ (_PyErr_Occurred(tstate) != NULL));
             Py_DECREF(self);
-            Py_DECREF(arg);
             SET_TOP(res);
             Py_DECREF(callable);
             if (res == NULL) {
@@ -4968,29 +4966,34 @@ check_eval_breaker:
             DISPATCH();
         }
 
-        TARGET(CALL_NO_KW_METHOD_DESCRIPTOR_FAST) {
+        TARGET(CALL_NO_KW_METHOD_DESCRIPTOR_VARARGS) {
             assert(_Py_OPCODE(next_instr[-2]) == PRECALL_METHOD);
             /* Builtin METH_FASTCALL methods, without keywords */
             SpecializedCacheEntry *caches = GET_CACHE();
             _PyAdaptiveEntry *cache0 = &caches[0].adaptive;
             DEOPT_IF(extra_args == 0, CALL_NO_KW);
             assert(extra_args == 1);
-            int nargs = cache0->original_oparg;
-            PyObject *callable = PEEK(nargs + 2);
+            int original_oparg = cache0->original_oparg;
+            PyObject *callable = PEEK(original_oparg + 2);
             DEOPT_IF(!Py_IS_TYPE(callable, &PyMethodDescr_Type),  CALL_NO_KW);
             PyMethodDef *meth = ((PyMethodDescrObject *)callable)->d_method;
-            DEOPT_IF(meth->ml_flags != METH_FASTCALL, CALL_NO_KW);
+            DEOPT_IF(meth->ml_flags != METH_VARARGS, CALL_NO_KW);
             STAT_INC(CALL_NO_KW, hit);
             assert(extra_args == 1);
             extra_args = 0;
             assert(STACK_ADJUST_IS_RESET);
-            _PyCFunctionFast cfunc = (_PyCFunctionFast)(void(*)(void))meth->ml_meth;
-            PyObject *self = PEEK(nargs+1);
-            PyObject *res = cfunc(self, &PEEK(nargs), nargs);
+            PyCFunction cfunc = (PyCFunction)(void(*)(void))meth->ml_meth;
+            PyObject *self = PEEK(original_oparg+1);
+            PyObject *argstuple = _PyTuple_FromArray(&PEEK(original_oparg), original_oparg);
+            if (argstuple == NULL) {
+                goto error;
+            }
+            PyObject *res = cfunc(self, argstuple);
             assert((res != NULL) ^ (_PyErr_Occurred(tstate) != NULL));
             /* Clear the stack of the arguments. */
-            STACK_SHRINK(nargs+1);
-            for (int i = 0; i <= nargs; i++) {
+            Py_DECREF(argstuple);
+            STACK_SHRINK(original_oparg+1);
+            for (int i = 0; i <= original_oparg; i++) {
                 Py_DECREF(stack_pointer[i]);
             }
             SET_TOP(res);
