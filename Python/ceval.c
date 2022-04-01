@@ -1898,14 +1898,15 @@ handle_eval_breaker:
             DISPATCH();
         }
 
-        TARGET(BINARY_OP_MULTIPLY_INT) {
+        TARGET(BINARY_OP_ADD_NUMBER) {
             assert(cframe.use_tracing == 0);
             PyObject *left = SECOND();
             PyObject *right = TOP();
-            DEOPT_IF(!PyLong_CheckExact(left), BINARY_OP);
-            DEOPT_IF(!PyLong_CheckExact(right), BINARY_OP);
+            PyTypeObject *lt = Py_TYPE(left);
+            DEOPT_IF(lt != Py_TYPE(right), BINARY_OP);
+            DEOPT_IF(lt->tp_as_number == NULL || lt->tp_as_number->nb_add == NULL, BINARY_OP);
             STAT_INC(BINARY_OP, hit);
-            PyObject *prod = _PyLong_Multiply((PyLongObject *)left, (PyLongObject *)right);
+            PyObject *prod = lt->tp_as_number->nb_add(left, right);
             SET_SECOND(prod);
             Py_DECREF(right);
             Py_DECREF(left);
@@ -1917,16 +1918,15 @@ handle_eval_breaker:
             NOTRACE_DISPATCH();
         }
 
-        TARGET(BINARY_OP_MULTIPLY_FLOAT) {
+        TARGET(BINARY_OP_ADD_SEQUENCE) {
             assert(cframe.use_tracing == 0);
             PyObject *left = SECOND();
             PyObject *right = TOP();
-            DEOPT_IF(!PyFloat_CheckExact(left), BINARY_OP);
-            DEOPT_IF(!PyFloat_CheckExact(right), BINARY_OP);
+            PyTypeObject *lt = Py_TYPE(left);
+            DEOPT_IF(lt != Py_TYPE(right), BINARY_OP);
+            DEOPT_IF(lt->tp_as_sequence == NULL || lt->tp_as_sequence->sq_concat == NULL, BINARY_OP);
             STAT_INC(BINARY_OP, hit);
-            double dprod = ((PyFloatObject *)left)->ob_fval *
-                ((PyFloatObject *)right)->ob_fval;
-            PyObject *prod = PyFloat_FromDouble(dprod);
+            PyObject *prod = lt->tp_as_sequence->sq_concat(left, right);
             SET_SECOND(prod);
             Py_DECREF(right);
             Py_DECREF(left);
@@ -1938,139 +1938,243 @@ handle_eval_breaker:
             NOTRACE_DISPATCH();
         }
 
-        TARGET(BINARY_OP_SUBTRACT_INT) {
+        TARGET(BINARY_OP_MULTIPLY_NUMBER) {
             assert(cframe.use_tracing == 0);
             PyObject *left = SECOND();
             PyObject *right = TOP();
-            DEOPT_IF(!PyLong_CheckExact(left), BINARY_OP);
-            DEOPT_IF(!PyLong_CheckExact(right), BINARY_OP);
+            PyTypeObject *lt = Py_TYPE(left);
+            DEOPT_IF(lt != Py_TYPE(right), BINARY_OP);
+            DEOPT_IF(lt->tp_as_number == NULL || lt->tp_as_number->nb_multiply == NULL, BINARY_OP);
             STAT_INC(BINARY_OP, hit);
-            PyObject *sub = _PyLong_Subtract((PyLongObject *)left, (PyLongObject *)right);
-            SET_SECOND(sub);
+            PyObject *prod = lt->tp_as_number->nb_multiply(left, right);
+            SET_SECOND(prod);
             Py_DECREF(right);
             Py_DECREF(left);
             STACK_SHRINK(1);
-            if (sub == NULL) {
+            if (prod == NULL) {
                 goto error;
             }
             JUMPBY(INLINE_CACHE_ENTRIES_BINARY_OP);
             NOTRACE_DISPATCH();
         }
 
-        TARGET(BINARY_OP_SUBTRACT_FLOAT) {
+        TARGET(BINARY_OP_MULTIPLY_SEQUENCE) {
             assert(cframe.use_tracing == 0);
             PyObject *left = SECOND();
             PyObject *right = TOP();
-            DEOPT_IF(!PyFloat_CheckExact(left), BINARY_OP);
-            DEOPT_IF(!PyFloat_CheckExact(right), BINARY_OP);
+            PyTypeObject *lt = Py_TYPE(left);
+            DEOPT_IF(PyIndex_Check(right), BINARY_OP);
+            DEOPT_IF(lt->tp_as_sequence == NULL || lt->tp_as_sequence->sq_repeat == NULL, BINARY_OP);
             STAT_INC(BINARY_OP, hit);
-            double dsub = ((PyFloatObject *)left)->ob_fval - ((PyFloatObject *)right)->ob_fval;
-            PyObject *sub = PyFloat_FromDouble(dsub);
-            SET_SECOND(sub);
+            Py_ssize_t count = PyNumber_AsSsize_t(right, PyExc_OverflowError);
+            if (count == -1 && PyErr_Occurred()) {
+                goto error;
+            }
+            PyObject *prod = lt->tp_as_sequence->sq_repeat(left, count);
+            SET_SECOND(prod);
             Py_DECREF(right);
             Py_DECREF(left);
             STACK_SHRINK(1);
-            if (sub == NULL) {
+            if (prod == NULL) {
                 goto error;
             }
             JUMPBY(INLINE_CACHE_ENTRIES_BINARY_OP);
             NOTRACE_DISPATCH();
         }
 
-        TARGET(BINARY_OP_ADD_UNICODE) {
+        TARGET(BINARY_OP_SUBTRACT_NUMBER) {
             assert(cframe.use_tracing == 0);
             PyObject *left = SECOND();
             PyObject *right = TOP();
-            DEOPT_IF(!PyUnicode_CheckExact(left), BINARY_OP);
-            DEOPT_IF(Py_TYPE(right) != Py_TYPE(left), BINARY_OP);
+            PyTypeObject *lt = Py_TYPE(left);
+            DEOPT_IF(lt != Py_TYPE(right), BINARY_OP);
+            DEOPT_IF(lt->tp_as_number == NULL || lt->tp_as_number->nb_subtract == NULL, BINARY_OP);
             STAT_INC(BINARY_OP, hit);
-            PyObject *res = PyUnicode_Concat(left, right);
-            STACK_SHRINK(1);
-            SET_TOP(res);
-            Py_DECREF(left);
+            PyObject *prod = lt->tp_as_number->nb_subtract(left, right);
+            SET_SECOND(prod);
             Py_DECREF(right);
-            if (TOP() == NULL) {
+            Py_DECREF(left);
+            STACK_SHRINK(1);
+            if (prod == NULL) {
                 goto error;
             }
             JUMPBY(INLINE_CACHE_ENTRIES_BINARY_OP);
             NOTRACE_DISPATCH();
         }
 
-        TARGET(BINARY_OP_INPLACE_ADD_UNICODE) {
-            assert(cframe.use_tracing == 0);
-            PyObject *left = SECOND();
-            PyObject *right = TOP();
-            DEOPT_IF(!PyUnicode_CheckExact(left), BINARY_OP);
-            DEOPT_IF(Py_TYPE(right) != Py_TYPE(left), BINARY_OP);
-            _Py_CODEUNIT true_next = next_instr[INLINE_CACHE_ENTRIES_BINARY_OP];
-            assert(_Py_OPCODE(true_next) == STORE_FAST ||
-                   _Py_OPCODE(true_next) == STORE_FAST__LOAD_FAST);
-            PyObject **target_local = &GETLOCAL(_Py_OPARG(true_next));
-            DEOPT_IF(*target_local != left, BINARY_OP);
-            STAT_INC(BINARY_OP, hit);
-            /* Handle `left = left + right` or `left += right` for str.
-             *
-             * When possible, extend `left` in place rather than
-             * allocating a new PyUnicodeObject. This attempts to avoid
-             * quadratic behavior when one neglects to use str.join().
-             *
-             * If `left` has only two references remaining (one from
-             * the stack, one in the locals), DECREFing `left` leaves
-             * only the locals reference, so PyUnicode_Append knows
-             * that the string is safe to mutate.
-             */
-            assert(Py_REFCNT(left) >= 2);
-            Py_DECREF(left); // XXX never need to dealloc
-            STACK_SHRINK(2);
-            PyUnicode_Append(target_local, right);
-            Py_DECREF(right);
-            if (*target_local == NULL) {
-                goto error;
-            }
-            // The STORE_FAST is already done.
-            JUMPBY(INLINE_CACHE_ENTRIES_BINARY_OP + 1);
-            NOTRACE_DISPATCH();
-        }
-
-        TARGET(BINARY_OP_ADD_FLOAT) {
-            assert(cframe.use_tracing == 0);
-            PyObject *left = SECOND();
-            PyObject *right = TOP();
-            DEOPT_IF(!PyFloat_CheckExact(left), BINARY_OP);
-            DEOPT_IF(Py_TYPE(right) != Py_TYPE(left), BINARY_OP);
-            STAT_INC(BINARY_OP, hit);
-            double dsum = ((PyFloatObject *)left)->ob_fval +
-                ((PyFloatObject *)right)->ob_fval;
-            PyObject *sum = PyFloat_FromDouble(dsum);
-            SET_SECOND(sum);
-            Py_DECREF(right);
-            Py_DECREF(left);
-            STACK_SHRINK(1);
-            if (sum == NULL) {
-                goto error;
-            }
-            JUMPBY(INLINE_CACHE_ENTRIES_BINARY_OP);
-            NOTRACE_DISPATCH();
-        }
-
-        TARGET(BINARY_OP_ADD_INT) {
-            assert(cframe.use_tracing == 0);
-            PyObject *left = SECOND();
-            PyObject *right = TOP();
-            DEOPT_IF(!PyLong_CheckExact(left), BINARY_OP);
-            DEOPT_IF(Py_TYPE(right) != Py_TYPE(left), BINARY_OP);
-            STAT_INC(BINARY_OP, hit);
-            PyObject *sum = _PyLong_Add((PyLongObject *)left, (PyLongObject *)right);
-            SET_SECOND(sum);
-            Py_DECREF(right);
-            Py_DECREF(left);
-            STACK_SHRINK(1);
-            if (sum == NULL) {
-                goto error;
-            }
-            JUMPBY(INLINE_CACHE_ENTRIES_BINARY_OP);
-            NOTRACE_DISPATCH();
-        }
+//        TARGET(BINARY_OP_MULTIPLY_INT) {
+//            assert(cframe.use_tracing == 0);
+//            PyObject *left = SECOND();
+//            PyObject *right = TOP();
+//            DEOPT_IF(!PyLong_CheckExact(left), BINARY_OP);
+//            DEOPT_IF(!PyLong_CheckExact(right), BINARY_OP);
+//            STAT_INC(BINARY_OP, hit);
+//            PyObject *prod = _PyLong_Multiply((PyLongObject *)left, (PyLongObject *)right);
+//            SET_SECOND(prod);
+//            Py_DECREF(right);
+//            Py_DECREF(left);
+//            STACK_SHRINK(1);
+//            if (prod == NULL) {
+//                goto error;
+//            }
+//            JUMPBY(INLINE_CACHE_ENTRIES_BINARY_OP);
+//            NOTRACE_DISPATCH();
+//        }
+//
+//        TARGET(BINARY_OP_MULTIPLY_FLOAT) {
+//            assert(cframe.use_tracing == 0);
+//            PyObject *left = SECOND();
+//            PyObject *right = TOP();
+//            DEOPT_IF(!PyFloat_CheckExact(left), BINARY_OP);
+//            DEOPT_IF(!PyFloat_CheckExact(right), BINARY_OP);
+//            STAT_INC(BINARY_OP, hit);
+//            double dprod = ((PyFloatObject *)left)->ob_fval *
+//                ((PyFloatObject *)right)->ob_fval;
+//            PyObject *prod = PyFloat_FromDouble(dprod);
+//            SET_SECOND(prod);
+//            Py_DECREF(right);
+//            Py_DECREF(left);
+//            STACK_SHRINK(1);
+//            if (prod == NULL) {
+//                goto error;
+//            }
+//            JUMPBY(INLINE_CACHE_ENTRIES_BINARY_OP);
+//            NOTRACE_DISPATCH();
+//        }
+//
+//        TARGET(BINARY_OP_SUBTRACT_INT) {
+//            assert(cframe.use_tracing == 0);
+//            PyObject *left = SECOND();
+//            PyObject *right = TOP();
+//            DEOPT_IF(!PyLong_CheckExact(left), BINARY_OP);
+//            DEOPT_IF(!PyLong_CheckExact(right), BINARY_OP);
+//            STAT_INC(BINARY_OP, hit);
+//            PyObject *sub = _PyLong_Subtract((PyLongObject *)left, (PyLongObject *)right);
+//            SET_SECOND(sub);
+//            Py_DECREF(right);
+//            Py_DECREF(left);
+//            STACK_SHRINK(1);
+//            if (sub == NULL) {
+//                goto error;
+//            }
+//            JUMPBY(INLINE_CACHE_ENTRIES_BINARY_OP);
+//            NOTRACE_DISPATCH();
+//        }
+//
+//        TARGET(BINARY_OP_SUBTRACT_FLOAT) {
+//            assert(cframe.use_tracing == 0);
+//            PyObject *left = SECOND();
+//            PyObject *right = TOP();
+//            DEOPT_IF(!PyFloat_CheckExact(left), BINARY_OP);
+//            DEOPT_IF(!PyFloat_CheckExact(right), BINARY_OP);
+//            STAT_INC(BINARY_OP, hit);
+//            double dsub = ((PyFloatObject *)left)->ob_fval - ((PyFloatObject *)right)->ob_fval;
+//            PyObject *sub = PyFloat_FromDouble(dsub);
+//            SET_SECOND(sub);
+//            Py_DECREF(right);
+//            Py_DECREF(left);
+//            STACK_SHRINK(1);
+//            if (sub == NULL) {
+//                goto error;
+//            }
+//            JUMPBY(INLINE_CACHE_ENTRIES_BINARY_OP);
+//            NOTRACE_DISPATCH();
+//        }
+//
+//        TARGET(BINARY_OP_ADD_UNICODE) {
+//            assert(cframe.use_tracing == 0);
+//            PyObject *left = SECOND();
+//            PyObject *right = TOP();
+//            DEOPT_IF(!PyUnicode_CheckExact(left), BINARY_OP);
+//            DEOPT_IF(Py_TYPE(right) != Py_TYPE(left), BINARY_OP);
+//            STAT_INC(BINARY_OP, hit);
+//            PyObject *res = PyUnicode_Concat(left, right);
+//            STACK_SHRINK(1);
+//            SET_TOP(res);
+//            Py_DECREF(left);
+//            Py_DECREF(right);
+//            if (TOP() == NULL) {
+//                goto error;
+//            }
+//            JUMPBY(INLINE_CACHE_ENTRIES_BINARY_OP);
+//            NOTRACE_DISPATCH();
+//        }
+//
+//        TARGET(BINARY_OP_INPLACE_ADD_UNICODE) {
+//            assert(cframe.use_tracing == 0);
+//            PyObject *left = SECOND();
+//            PyObject *right = TOP();
+//            DEOPT_IF(!PyUnicode_CheckExact(left), BINARY_OP);
+//            DEOPT_IF(Py_TYPE(right) != Py_TYPE(left), BINARY_OP);
+//            _Py_CODEUNIT true_next = next_instr[INLINE_CACHE_ENTRIES_BINARY_OP];
+//            assert(_Py_OPCODE(true_next) == STORE_FAST ||
+//                   _Py_OPCODE(true_next) == STORE_FAST__LOAD_FAST);
+//            PyObject **target_local = &GETLOCAL(_Py_OPARG(true_next));
+//            DEOPT_IF(*target_local != left, BINARY_OP);
+//            STAT_INC(BINARY_OP, hit);
+//            /* Handle `left = left + right` or `left += right` for str.
+//             *
+//             * When possible, extend `left` in place rather than
+//             * allocating a new PyUnicodeObject. This attempts to avoid
+//             * quadratic behavior when one neglects to use str.join().
+//             *
+//             * If `left` has only two references remaining (one from
+//             * the stack, one in the locals), DECREFing `left` leaves
+//             * only the locals reference, so PyUnicode_Append knows
+//             * that the string is safe to mutate.
+//             */
+//            assert(Py_REFCNT(left) >= 2);
+//            Py_DECREF(left); // XXX never need to dealloc
+//            STACK_SHRINK(2);
+//            PyUnicode_Append(target_local, right);
+//            Py_DECREF(right);
+//            if (*target_local == NULL) {
+//                goto error;
+//            }
+//            // The STORE_FAST is already done.
+//            JUMPBY(INLINE_CACHE_ENTRIES_BINARY_OP + 1);
+//            NOTRACE_DISPATCH();
+//        }
+//
+//        TARGET(BINARY_OP_ADD_FLOAT) {
+//            assert(cframe.use_tracing == 0);
+//            PyObject *left = SECOND();
+//            PyObject *right = TOP();
+//            DEOPT_IF(!PyFloat_CheckExact(left), BINARY_OP);
+//            DEOPT_IF(Py_TYPE(right) != Py_TYPE(left), BINARY_OP);
+//            STAT_INC(BINARY_OP, hit);
+//            double dsum = ((PyFloatObject *)left)->ob_fval +
+//                ((PyFloatObject *)right)->ob_fval;
+//            PyObject *sum = PyFloat_FromDouble(dsum);
+//            SET_SECOND(sum);
+//            Py_DECREF(right);
+//            Py_DECREF(left);
+//            STACK_SHRINK(1);
+//            if (sum == NULL) {
+//                goto error;
+//            }
+//            JUMPBY(INLINE_CACHE_ENTRIES_BINARY_OP);
+//            NOTRACE_DISPATCH();
+//        }
+//
+//        TARGET(BINARY_OP_ADD_INT) {
+//            assert(cframe.use_tracing == 0);
+//            PyObject *left = SECOND();
+//            PyObject *right = TOP();
+//            DEOPT_IF(!PyLong_CheckExact(left), BINARY_OP);
+//            DEOPT_IF(Py_TYPE(right) != Py_TYPE(left), BINARY_OP);
+//            STAT_INC(BINARY_OP, hit);
+//            PyObject *sum = _PyLong_Add((PyLongObject *)left, (PyLongObject *)right);
+//            SET_SECOND(sum);
+//            Py_DECREF(right);
+//            Py_DECREF(left);
+//            STACK_SHRINK(1);
+//            if (sum == NULL) {
+//                goto error;
+//            }
+//            JUMPBY(INLINE_CACHE_ENTRIES_BINARY_OP);
+//            NOTRACE_DISPATCH();
+//        }
 
         TARGET(BINARY_SUBSCR) {
             PREDICTED(BINARY_SUBSCR);
