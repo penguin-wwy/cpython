@@ -1750,6 +1750,7 @@ _Py_Specialize_BinaryOp(PyObject *lhs, PyObject *rhs, _Py_CODEUNIT *instr,
 {
     assert(_PyOpcode_Caches[BINARY_OP] == INLINE_CACHE_ENTRIES_BINARY_OP);
     _PyBinaryOpCache *cache = (_PyBinaryOpCache *)(instr + 1);
+    PyTypeObject *lt = Py_TYPE(lhs);
     switch (oparg) {
         case NB_ADD:
         case NB_INPLACE_ADD:
@@ -1775,19 +1776,43 @@ _Py_Specialize_BinaryOp(PyObject *lhs, PyObject *rhs, _Py_CODEUNIT *instr,
                 _Py_SET_OPCODE(*instr, BINARY_OP_ADD_FLOAT);
                 goto success;
             }
+            if (lt->tp_as_number == NULL || lt->tp_as_number->nb_add == NULL) {
+                PySequenceMethods *m = lt->tp_as_sequence;
+                if (oparg == NB_ADD && m != NULL && m->sq_concat != NULL) {
+                    _Py_SET_OPCODE(*instr, BINARY_OP_ADD_SEQ);
+                    goto success;
+                }
+                if (oparg == NB_INPLACE_ADD && m != NULL &&
+                    (m->sq_inplace_concat != NULL || m->sq_concat != NULL)) {
+                    _Py_SET_OPCODE(*instr, BINARY_OP_INPLACE_ADD_SEQ);
+                    goto success;
+                }
+            }
             break;
         case NB_MULTIPLY:
         case NB_INPLACE_MULTIPLY:
-            if (!Py_IS_TYPE(lhs, Py_TYPE(rhs))) {
-                break;
-            }
-            if (PyLong_CheckExact(lhs)) {
-                _Py_SET_OPCODE(*instr, BINARY_OP_MULTIPLY_INT);
-                goto success;
-            }
-            if (PyFloat_CheckExact(lhs)) {
-                _Py_SET_OPCODE(*instr, BINARY_OP_MULTIPLY_FLOAT);
-                goto success;
+            if (Py_IS_TYPE(lhs, Py_TYPE(rhs))) {
+                if (PyLong_CheckExact(lhs)) {
+                    _Py_SET_OPCODE(*instr, BINARY_OP_MULTIPLY_INT);
+                    goto success;
+                }
+                if (PyFloat_CheckExact(lhs)) {
+                    _Py_SET_OPCODE(*instr, BINARY_OP_MULTIPLY_FLOAT);
+                    goto success;
+                }
+            } else {
+                if (PyIndex_Check(rhs) && (lt->tp_as_number == NULL || lt->tp_as_number->nb_multiply == NULL)) {
+                    PySequenceMethods *m = lt->tp_as_sequence;
+                    if (oparg == NB_MULTIPLY && m != NULL && m->sq_repeat != NULL) {
+                        _Py_SET_OPCODE(*instr, BINARY_OP_ADD_SEQ);
+                        goto success;
+                    }
+                    if (oparg == NB_INPLACE_MULTIPLY && m != NULL &&
+                        (m->sq_inplace_repeat != NULL || m->sq_repeat != NULL)) {
+                        _Py_SET_OPCODE(*instr, BINARY_OP_INPLACE_ADD_SEQ);
+                        goto success;
+                    }
+                }
             }
             break;
         case NB_SUBTRACT:

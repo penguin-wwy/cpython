@@ -1938,6 +1938,62 @@ handle_eval_breaker:
             NOTRACE_DISPATCH();
         }
 
+        TARGET(BINARY_OP_MULTIPLY_SEQ) {
+            assert(cframe.use_tracing == 0);
+            PyObject *left = SECOND();
+            PyObject *right = TOP();
+            PyTypeObject *lt = Py_TYPE(left);
+            DEOPT_IF(_PyIndex_Check(right), BINARY_OP);
+            DEOPT_IF(lt->tp_as_number != NULL && lt->tp_as_number->nb_multiply != NULL, BINARY_OP);
+            DEOPT_IF(lt->tp_as_sequence == NULL || lt->tp_as_sequence->sq_repeat == NULL, BINARY_OP);
+            STAT_INC(BINARY_OP, hit);
+            Py_ssize_t count = PyNumber_AsSsize_t(right, PyExc_OverflowError);
+            if (count == -1 && PyErr_Occurred())
+                goto error;
+            PyObject *prod = lt->tp_as_sequence->sq_repeat(left, count);
+            SET_SECOND(prod);
+            Py_DECREF(right);
+            Py_DECREF(left);
+            STACK_SHRINK(1);
+            if (prod == NULL) {
+                goto error;
+            }
+            JUMPBY(INLINE_CACHE_ENTRIES_BINARY_OP);
+            NOTRACE_DISPATCH();
+        }
+
+        TARGET(BINARY_OP_INPLACE_MULTIPLY_SEQ) {
+            assert(cframe.use_tracing == 0);
+            PyObject *left = SECOND();
+            PyObject *right = TOP();
+            PyTypeObject *lt = Py_TYPE(left);
+            DEOPT_IF(PyIndex_Check(right), BINARY_OP);
+            DEOPT_IF(lt->tp_as_number != NULL &&
+                (lt->tp_as_number->nb_inplace_multiply != NULL || lt->tp_as_number->nb_multiply != NULL), BINARY_OP);
+            DEOPT_IF(lt->tp_as_sequence == NULL, BINARY_OP);
+            Py_ssize_t count = PyNumber_AsSsize_t(right, PyExc_OverflowError);
+            if (count == -1 && PyErr_Occurred())
+                goto error;
+            PyObject *prod;
+            if (lt->tp_as_sequence->sq_inplace_repeat != NULL) {
+                prod = lt->tp_as_sequence->sq_inplace_repeat(left, count);
+            } else if (lt->tp_as_sequence->sq_repeat != NULL) {
+                prod = lt->tp_as_sequence->sq_repeat(left, count);
+            } else {
+                DEOPT_IF(1, BINARY_OP);
+            }
+            STAT_INC(BINARY_OP, hit);
+            SET_SECOND(prod);
+            Py_DECREF(right);
+            Py_DECREF(left);
+            STACK_SHRINK(1);
+            if (prod == NULL) {
+                goto error;
+            }
+            JUMPBY(INLINE_CACHE_ENTRIES_BINARY_OP);
+            NOTRACE_DISPATCH();
+        }
+
         TARGET(BINARY_OP_SUBTRACT_INT) {
             assert(cframe.use_tracing == 0);
             PyObject *left = SECOND();
@@ -2061,6 +2117,56 @@ handle_eval_breaker:
             DEOPT_IF(Py_TYPE(right) != Py_TYPE(left), BINARY_OP);
             STAT_INC(BINARY_OP, hit);
             PyObject *sum = _PyLong_Add((PyLongObject *)left, (PyLongObject *)right);
+            SET_SECOND(sum);
+            Py_DECREF(right);
+            Py_DECREF(left);
+            STACK_SHRINK(1);
+            if (sum == NULL) {
+                goto error;
+            }
+            JUMPBY(INLINE_CACHE_ENTRIES_BINARY_OP);
+            NOTRACE_DISPATCH();
+        }
+
+        TARGET(BINARY_OP_ADD_SEQ) {
+            assert(cframe.use_tracing == 0);
+            PyObject *left = SECOND();
+            PyObject *right = TOP();
+            PyTypeObject *lt = Py_TYPE(left);
+            DEOPT_IF(lt != Py_TYPE(right), BINARY_OP);
+            DEOPT_IF(lt->tp_as_number != NULL && lt->tp_as_number->nb_add != NULL, BINARY_OP);
+            DEOPT_IF(lt->tp_as_sequence == NULL || lt->tp_as_sequence->sq_concat == NULL, BINARY_OP);
+            STAT_INC(BINARY_OP, hit);
+            PyObject *sum = lt->tp_as_sequence->sq_concat(left, right);
+            SET_SECOND(sum);
+            Py_DECREF(right);
+            Py_DECREF(left);
+            STACK_SHRINK(1);
+            if (sum == NULL) {
+                goto error;
+            }
+            JUMPBY(INLINE_CACHE_ENTRIES_BINARY_OP);
+            NOTRACE_DISPATCH();
+        }
+
+        TARGET(BINARY_OP_INPLACE_ADD_SEQ) {
+            assert(cframe.use_tracing == 0);
+            PyObject *left = SECOND();
+            PyObject *right = TOP();
+            PyTypeObject *lt = Py_TYPE(left);
+            DEOPT_IF(lt != Py_TYPE(right), BINARY_OP);
+            DEOPT_IF(lt->tp_as_number != NULL &&
+                (lt->tp_as_number->nb_inplace_add != NULL || lt->tp_as_number->nb_add != NULL), BINARY_OP);
+            DEOPT_IF(lt->tp_as_sequence == NULL, BINARY_OP);
+            PyObject *sum;
+            if (lt->tp_as_sequence->sq_inplace_concat != NULL) {
+                sum = lt->tp_as_sequence->sq_inplace_concat(left, right);
+            } else if (lt->tp_as_sequence->sq_concat != NULL) {
+                sum = lt->tp_as_sequence->sq_concat(left, right);
+            } else {
+                DEOPT_IF(1, BINARY_OP);
+            }
+            STAT_INC(BINARY_OP, hit);
             SET_SECOND(sum);
             Py_DECREF(right);
             Py_DECREF(left);
