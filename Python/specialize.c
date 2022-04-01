@@ -1753,7 +1753,7 @@ _Py_Specialize_BinaryOp(PyObject *lhs, PyObject *rhs, _Py_CODEUNIT *instr,
     PyTypeObject *lt = Py_TYPE(lhs);
     switch (oparg) {
         case NB_ADD:
-//        case NB_INPLACE_ADD:
+        case NB_INPLACE_ADD:
             if (!Py_IS_TYPE(lhs, Py_TYPE(rhs))) {
                 break;
             }
@@ -1761,8 +1761,12 @@ _Py_Specialize_BinaryOp(PyObject *lhs, PyObject *rhs, _Py_CODEUNIT *instr,
                 _Py_SET_OPCODE(*instr, BINARY_OP_ADD_NUMBER);
                 goto success;
             }
-            if (lt->tp_as_sequence != NULL && lt->tp_as_sequence->sq_concat != NULL) {
+            if (oparg == NB_ADD && lt->tp_as_sequence != NULL && lt->tp_as_sequence->sq_concat != NULL) {
                 _Py_SET_OPCODE(*instr, BINARY_OP_ADD_SEQUENCE);
+                goto success;
+            }
+            if (oparg == NB_INPLACE_ADD && lt->tp_as_sequence != NULL && lt->tp_as_sequence->sq_concat != NULL) {
+                _Py_SET_OPCODE(*instr, BINARY_OP_ADD_INPLACE_SEQUENCE);
                 goto success;
             }
 //            if (PyUnicode_CheckExact(lhs)) {
@@ -1786,13 +1790,17 @@ _Py_Specialize_BinaryOp(PyObject *lhs, PyObject *rhs, _Py_CODEUNIT *instr,
 //            }
             break;
         case NB_MULTIPLY:
-//        case NB_INPLACE_MULTIPLY:
+        case NB_INPLACE_MULTIPLY:
             if (Py_IS_TYPE(lhs, Py_TYPE(rhs)) && lt->tp_as_number != NULL && lt->tp_as_number->nb_multiply != NULL) {
                 _Py_SET_OPCODE(*instr, BINARY_OP_MULTIPLY_NUMBER);
                 goto success;
             }
-            if (PyIndex_Check(rhs) && lt->tp_as_sequence != NULL && lt->tp_as_sequence->sq_repeat != NULL) {
+            if (oparg == NB_MULTIPLY && PyIndex_Check(rhs) && lt->tp_as_sequence != NULL && lt->tp_as_sequence->sq_repeat != NULL) {
                 _Py_SET_OPCODE(*instr, BINARY_OP_MULTIPLY_SEQUENCE);
+                goto success;
+            }
+            if (oparg == NB_INPLACE_MULTIPLY && PyIndex_Check(rhs) && lt->tp_as_sequence != NULL && lt->tp_as_sequence->sq_inplace_repeat != NULL) {
+                _Py_SET_OPCODE(*instr, BINARY_OP_MULTIPLY_INPLACE_SEQUENCE);
                 goto success;
             }
 //            if (PyLong_CheckExact(lhs)) {
@@ -1805,7 +1813,7 @@ _Py_Specialize_BinaryOp(PyObject *lhs, PyObject *rhs, _Py_CODEUNIT *instr,
 //            }
             break;
         case NB_SUBTRACT:
-//        case NB_INPLACE_SUBTRACT:
+        case NB_INPLACE_SUBTRACT:
             if (!Py_IS_TYPE(lhs, Py_TYPE(rhs))) {
                 break;
             }

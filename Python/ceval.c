@@ -1938,6 +1938,26 @@ handle_eval_breaker:
             NOTRACE_DISPATCH();
         }
 
+        TARGET(BINARY_OP_ADD_INPLACE_SEQUENCE) {
+            assert(cframe.use_tracing == 0);
+            PyObject *left = SECOND();
+            PyObject *right = TOP();
+            PyTypeObject *lt = Py_TYPE(left);
+            DEOPT_IF(lt != Py_TYPE(right), BINARY_OP);
+            DEOPT_IF(lt->tp_as_sequence == NULL || lt->tp_as_sequence->sq_inplace_concat == NULL, BINARY_OP);
+            STAT_INC(BINARY_OP, hit);
+            PyObject *prod = lt->tp_as_sequence->sq_inplace_concat(left, right);
+            SET_SECOND(prod);
+            Py_DECREF(right);
+            Py_DECREF(left);
+            STACK_SHRINK(1);
+            if (prod == NULL) {
+                goto error;
+            }
+            JUMPBY(INLINE_CACHE_ENTRIES_BINARY_OP);
+            NOTRACE_DISPATCH();
+        }
+
         TARGET(BINARY_OP_MULTIPLY_NUMBER) {
             assert(cframe.use_tracing == 0);
             PyObject *left = SECOND();
@@ -1971,6 +1991,30 @@ handle_eval_breaker:
                 goto error;
             }
             PyObject *prod = lt->tp_as_sequence->sq_repeat(left, count);
+            SET_SECOND(prod);
+            Py_DECREF(right);
+            Py_DECREF(left);
+            STACK_SHRINK(1);
+            if (prod == NULL) {
+                goto error;
+            }
+            JUMPBY(INLINE_CACHE_ENTRIES_BINARY_OP);
+            NOTRACE_DISPATCH();
+        }
+
+        TARGET(BINARY_OP_MULTIPLY_INPLACE_SEQUENCE) {
+            assert(cframe.use_tracing == 0);
+            PyObject *left = SECOND();
+            PyObject *right = TOP();
+            PyTypeObject *lt = Py_TYPE(left);
+            DEOPT_IF(PyIndex_Check(right), BINARY_OP);
+            DEOPT_IF(lt->tp_as_sequence == NULL || lt->tp_as_sequence->sq_inplace_repeat == NULL, BINARY_OP);
+            STAT_INC(BINARY_OP, hit);
+            Py_ssize_t count = PyNumber_AsSsize_t(right, PyExc_OverflowError);
+            if (count == -1 && PyErr_Occurred()) {
+                goto error;
+            }
+            PyObject *prod = lt->tp_as_sequence->sq_inplace_repeat(left, count);
             SET_SECOND(prod);
             Py_DECREF(right);
             Py_DECREF(left);
