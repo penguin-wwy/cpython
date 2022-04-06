@@ -1744,6 +1744,9 @@ binary_op_fail_kind(int oparg, PyObject *lhs, PyObject *rhs)
 }
 #endif
 
+#define as_number_nb_op(tp, op) (tp->tp_as_number != NULL && \
+(tp->tp_as_number->nb_inplace_##op != NULL || tp->tp_as_number->nb_##op != NULL))
+
 void
 _Py_Specialize_BinaryOp(PyObject *lhs, PyObject *rhs, _Py_CODEUNIT *instr,
                         int oparg, PyObject **locals)
@@ -1751,22 +1754,15 @@ _Py_Specialize_BinaryOp(PyObject *lhs, PyObject *rhs, _Py_CODEUNIT *instr,
     assert(_PyOpcode_Caches[BINARY_OP] == INLINE_CACHE_ENTRIES_BINARY_OP);
     _PyBinaryOpCache *cache = (_PyBinaryOpCache *)(instr + 1);
     PyTypeObject *lt = Py_TYPE(lhs);
+    _Py_CODEUNIT next = instr[INLINE_CACHE_ENTRIES_BINARY_OP + 1];
+    bool to_store = (_Py_OPCODE(next) == STORE_FAST ||
+                     _Py_OPCODE(next) == STORE_FAST__LOAD_FAST);
+    bool inplace_op = to_store && locals[_Py_OPARG(next)] == lhs;
     switch (oparg) {
         case NB_ADD:
         case NB_INPLACE_ADD:
             if (!Py_IS_TYPE(lhs, Py_TYPE(rhs))) {
                 break;
-            }
-            if (PyUnicode_CheckExact(lhs)) {
-                _Py_CODEUNIT next = instr[INLINE_CACHE_ENTRIES_BINARY_OP + 1];
-                bool to_store = (_Py_OPCODE(next) == STORE_FAST ||
-                                 _Py_OPCODE(next) == STORE_FAST__LOAD_FAST);
-                if (to_store && locals[_Py_OPARG(next)] == lhs) {
-                    _Py_SET_OPCODE(*instr, BINARY_OP_INPLACE_ADD_UNICODE);
-                    goto success;
-                }
-                _Py_SET_OPCODE(*instr, BINARY_OP_ADD_UNICODE);
-                goto success;
             }
             if (PyLong_CheckExact(lhs)) {
                 _Py_SET_OPCODE(*instr, BINARY_OP_ADD_INT);
@@ -1776,17 +1772,13 @@ _Py_Specialize_BinaryOp(PyObject *lhs, PyObject *rhs, _Py_CODEUNIT *instr,
                 _Py_SET_OPCODE(*instr, BINARY_OP_ADD_FLOAT);
                 goto success;
             }
-            if (lt->tp_as_number == NULL || lt->tp_as_number->nb_add == NULL) {
-                PySequenceMethods *m = lt->tp_as_sequence;
-                if (oparg == NB_ADD && m != NULL && m->sq_concat != NULL) {
-                    _Py_SET_OPCODE(*instr, BINARY_OP_ADD_SEQ);
-                    goto success;
-                }
-                if (oparg == NB_INPLACE_ADD && m != NULL &&
-                    (m->sq_inplace_concat != NULL || m->sq_concat != NULL)) {
-                    _Py_SET_OPCODE(*instr, BINARY_OP_INPLACE_ADD_SEQ);
-                    goto success;
-                }
+            if (PyUnicode_CheckExact(lhs)) {
+                _Py_SET_OPCODE(*instr, inplace_op ? BINARY_OP_INPLACE_ADD_UNICODE : BINARY_OP_ADD_UNICODE);
+                goto success;
+            }
+            if (!as_number_nb_op(lt, add)) {
+                _Py_SET_OPCODE(*instr, inplace_op ? BINARY_OP_INPLACE_ADD_SEQ : BINARY_OP_ADD_SEQ);
+                goto success;
             }
             break;
         case NB_MULTIPLY:
@@ -1801,17 +1793,9 @@ _Py_Specialize_BinaryOp(PyObject *lhs, PyObject *rhs, _Py_CODEUNIT *instr,
                     goto success;
                 }
             } else {
-                if (PyIndex_Check(rhs) && (lt->tp_as_number == NULL || lt->tp_as_number->nb_multiply == NULL)) {
-                    PySequenceMethods *m = lt->tp_as_sequence;
-                    if (oparg == NB_MULTIPLY && m != NULL && m->sq_repeat != NULL) {
-                        _Py_SET_OPCODE(*instr, BINARY_OP_ADD_SEQ);
-                        goto success;
-                    }
-                    if (oparg == NB_INPLACE_MULTIPLY && m != NULL &&
-                        (m->sq_inplace_repeat != NULL || m->sq_repeat != NULL)) {
-                        _Py_SET_OPCODE(*instr, BINARY_OP_INPLACE_ADD_SEQ);
-                        goto success;
-                    }
+                if (PyIndex_Check(rhs) && !as_number_nb_op(lt, multiply)) {
+                    _Py_SET_OPCODE(*instr, inplace_op ? BINARY_OP_INPLACE_MULTIPLY_SEQ : BINARY_OP_MULTIPLY_SEQ);
+                    goto success;
                 }
             }
             break;

@@ -1939,12 +1939,14 @@ handle_eval_breaker:
         }
 
         TARGET(BINARY_OP_MULTIPLY_SEQ) {
+            PREDICTED(BINARY_OP_MULTIPLY_SEQ);
             assert(cframe.use_tracing == 0);
             PyObject *left = SECOND();
             PyObject *right = TOP();
             PyTypeObject *lt = Py_TYPE(left);
-            DEOPT_IF(_PyIndex_Check(right), BINARY_OP);
-            DEOPT_IF(lt->tp_as_number != NULL && lt->tp_as_number->nb_multiply != NULL, BINARY_OP);
+            DEOPT_IF(!_PyIndex_Check(right), BINARY_OP);
+            DEOPT_IF(lt->tp_as_number != NULL &&
+                    (lt->tp_as_number->nb_inplace_multiply != NULL || lt->tp_as_number->nb_multiply != NULL), BINARY_OP);
             DEOPT_IF(lt->tp_as_sequence == NULL || lt->tp_as_sequence->sq_repeat == NULL, BINARY_OP);
             STAT_INC(BINARY_OP, hit);
             Py_ssize_t count = PyNumber_AsSsize_t(right, PyExc_OverflowError);
@@ -1967,30 +1969,31 @@ handle_eval_breaker:
             PyObject *left = SECOND();
             PyObject *right = TOP();
             PyTypeObject *lt = Py_TYPE(left);
-            DEOPT_IF(PyIndex_Check(right), BINARY_OP);
-            DEOPT_IF(lt->tp_as_number != NULL &&
-                (lt->tp_as_number->nb_inplace_multiply != NULL || lt->tp_as_number->nb_multiply != NULL), BINARY_OP);
             DEOPT_IF(lt->tp_as_sequence == NULL, BINARY_OP);
+            if (lt->tp_as_sequence->sq_inplace_repeat == NULL) {
+                JUMP_TO_INSTRUCTION(BINARY_OP_MULTIPLY_SEQ);
+            }
+            DEOPT_IF(!_PyIndex_Check(right), BINARY_OP);
+            DEOPT_IF(lt->tp_as_number != NULL &&
+                    (lt->tp_as_number->nb_inplace_multiply != NULL || lt->tp_as_number->nb_multiply != NULL), BINARY_OP);
+            _Py_CODEUNIT true_next = next_instr[INLINE_CACHE_ENTRIES_BINARY_OP];
+            assert(_Py_OPCODE(true_next) == STORE_FAST ||
+                   _Py_OPCODE(true_next) == STORE_FAST__LOAD_FAST);
+            PyObject *target_local = GETLOCAL(_Py_OPARG(true_next));
+            DEOPT_IF(target_local != left, BINARY_OP);
+            STAT_INC(BINARY_OP, hit);
+            assert(Py_REFCNT(left) >= 2);
+            Py_DECREF(left);
             Py_ssize_t count = PyNumber_AsSsize_t(right, PyExc_OverflowError);
             if (count == -1 && PyErr_Occurred())
                 goto error;
-            PyObject *prod;
-            if (lt->tp_as_sequence->sq_inplace_repeat != NULL) {
-                prod = lt->tp_as_sequence->sq_inplace_repeat(left, count);
-            } else if (lt->tp_as_sequence->sq_repeat != NULL) {
-                prod = lt->tp_as_sequence->sq_repeat(left, count);
-            } else {
-                DEOPT_IF(1, BINARY_OP);
-            }
-            STAT_INC(BINARY_OP, hit);
-            SET_SECOND(prod);
+            PyObject *prod = lt->tp_as_sequence->sq_inplace_repeat(left, count);
             Py_DECREF(right);
-            Py_DECREF(left);
-            STACK_SHRINK(1);
+            STACK_SHRINK(2);
             if (prod == NULL) {
                 goto error;
             }
-            JUMPBY(INLINE_CACHE_ENTRIES_BINARY_OP);
+            JUMPBY(INLINE_CACHE_ENTRIES_BINARY_OP + 1);
             NOTRACE_DISPATCH();
         }
 
@@ -2129,12 +2132,14 @@ handle_eval_breaker:
         }
 
         TARGET(BINARY_OP_ADD_SEQ) {
+            PREDICTED(BINARY_OP_ADD_SEQ);
             assert(cframe.use_tracing == 0);
             PyObject *left = SECOND();
             PyObject *right = TOP();
             PyTypeObject *lt = Py_TYPE(left);
             DEOPT_IF(lt != Py_TYPE(right), BINARY_OP);
-            DEOPT_IF(lt->tp_as_number != NULL && lt->tp_as_number->nb_add != NULL, BINARY_OP);
+            DEOPT_IF(lt->tp_as_number != NULL &&
+                    (lt->tp_as_number->nb_inplace_add != NULL || lt->tp_as_number->nb_add != NULL), BINARY_OP);
             DEOPT_IF(lt->tp_as_sequence == NULL || lt->tp_as_sequence->sq_concat == NULL, BINARY_OP);
             STAT_INC(BINARY_OP, hit);
             PyObject *sum = lt->tp_as_sequence->sq_concat(left, right);
@@ -2154,27 +2159,28 @@ handle_eval_breaker:
             PyObject *left = SECOND();
             PyObject *right = TOP();
             PyTypeObject *lt = Py_TYPE(left);
+            DEOPT_IF(lt->tp_as_sequence == NULL, BINARY_OP);
+            if (lt->tp_as_sequence->sq_inplace_concat == NULL) {
+                JUMP_TO_INSTRUCTION(BINARY_OP_ADD_SEQ);
+            }
             DEOPT_IF(lt != Py_TYPE(right), BINARY_OP);
             DEOPT_IF(lt->tp_as_number != NULL &&
-                (lt->tp_as_number->nb_inplace_add != NULL || lt->tp_as_number->nb_add != NULL), BINARY_OP);
-            DEOPT_IF(lt->tp_as_sequence == NULL, BINARY_OP);
-            PyObject *sum;
-            if (lt->tp_as_sequence->sq_inplace_concat != NULL) {
-                sum = lt->tp_as_sequence->sq_inplace_concat(left, right);
-            } else if (lt->tp_as_sequence->sq_concat != NULL) {
-                sum = lt->tp_as_sequence->sq_concat(left, right);
-            } else {
-                DEOPT_IF(1, BINARY_OP);
-            }
+                     (lt->tp_as_number->nb_inplace_add != NULL || lt->tp_as_number->nb_add != NULL), BINARY_OP);
+            _Py_CODEUNIT true_next = next_instr[INLINE_CACHE_ENTRIES_BINARY_OP];
+            assert(_Py_OPCODE(true_next) == STORE_FAST ||
+                   _Py_OPCODE(true_next) == STORE_FAST__LOAD_FAST);
+            PyObject *target_local = GETLOCAL(_Py_OPARG(true_next));
+            DEOPT_IF(target_local != left, BINARY_OP);
             STAT_INC(BINARY_OP, hit);
-            SET_SECOND(sum);
-            Py_DECREF(right);
+            assert(Py_REFCNT(left) >= 2);
             Py_DECREF(left);
-            STACK_SHRINK(1);
-            if (sum == NULL) {
+            PyObject *res = lt->tp_as_sequence->sq_inplace_concat(target_local, right);;
+            Py_DECREF(right);
+            STACK_SHRINK(2);
+            if (res == NULL) {
                 goto error;
             }
-            JUMPBY(INLINE_CACHE_ENTRIES_BINARY_OP);
+            JUMPBY(INLINE_CACHE_ENTRIES_BINARY_OP + 1);
             NOTRACE_DISPATCH();
         }
 
