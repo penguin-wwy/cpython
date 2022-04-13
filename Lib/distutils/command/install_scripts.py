@@ -6,7 +6,7 @@ Python scripts."""
 # contributed by Bastian Kleineidam
 
 import os
-from distutils.core import Command
+from distutils.cmd import Command
 from distutils import log
 from stat import ST_MODE
 

@@ -2,8 +2,8 @@
 import os
 import unittest
 
-from distutils.core import PyPIRCCommand
-from distutils.core import Distribution
+from distutils.config import PyPIRCCommand
+from distutils.dist import Distribution
 from distutils.log import set_threshold
 from distutils.log import WARN
 

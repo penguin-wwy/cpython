@@ -15,7 +15,7 @@ module."""
 # cut 'n paste.  Sigh.
 
 import os
-from distutils.core import Command
+from distutils.cmd import Command
 from distutils.errors import *
 from distutils.sysconfig import customize_compiler
 from distutils import log

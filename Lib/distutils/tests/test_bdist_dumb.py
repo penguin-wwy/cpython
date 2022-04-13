@@ -6,7 +6,7 @@ import zipfile
 import unittest
 from test.support import run_unittest
 
-from distutils.core import Distribution
+from distutils.dist import Distribution
 from distutils.command.bdist_dumb import bdist_dumb
 from distutils.tests import support
 

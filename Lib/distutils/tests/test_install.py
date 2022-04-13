@@ -12,7 +12,7 @@ from distutils.command.install import install, HAS_USER_SITE
 from distutils.command import install as install_module
 from distutils.command.build_ext import build_ext
 from distutils.command.install import INSTALL_SCHEMES
-from distutils.core import Distribution
+from distutils.dist import Distribution
 from distutils.errors import DistutilsOptionError
 from distutils.extension import Extension
 

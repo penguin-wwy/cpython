@@ -23,7 +23,7 @@ except ImportError:
     UID_GID_SUPPORT = False
 
 from distutils.command.sdist import sdist, show_formats
-from distutils.core import Distribution
+from distutils.dist import Distribution
 from distutils.tests.test_config import BasePyPIRCCommandTestCase
 from distutils.errors import DistutilsOptionError
 from distutils.spawn import find_executable

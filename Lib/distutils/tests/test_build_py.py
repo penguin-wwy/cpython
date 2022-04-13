@@ -5,7 +5,7 @@ import sys
 import unittest
 
 from distutils.command.build_py import build_py
-from distutils.core import Distribution
+from distutils.dist import Distribution
 from distutils.errors import DistutilsFileError
 
 from distutils.tests import support

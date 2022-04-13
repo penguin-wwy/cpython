@@ -11,7 +11,7 @@ this header file lives".
 
 import os, re
 
-from distutils.core import Command
+from distutils.cmd import Command
 from distutils.errors import DistutilsExecError
 from distutils.sysconfig import customize_compiler
 from distutils import log

@@ -3,7 +3,7 @@
 Implements the Distutils 'build' command."""
 
 import sys, os
-from distutils.core import Command
+from distutils.cmd import Command
 from distutils.errors import DistutilsOptionError
 from distutils.util import get_platform
 

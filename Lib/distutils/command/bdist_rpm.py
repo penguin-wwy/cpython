@@ -4,7 +4,7 @@ Implements the Distutils 'bdist_rpm' command (create RPM source and binary
 distributions)."""
 
 import subprocess, sys, os
-from distutils.core import Command
+from distutils.cmd import Command
 from distutils.debug import DEBUG
 from distutils.file_util import write_file
 from distutils.errors import *

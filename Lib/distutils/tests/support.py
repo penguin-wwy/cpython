@@ -10,7 +10,7 @@ from test.support import os_helper
 
 from distutils import log
 from distutils.log import DEBUG, INFO, WARN, ERROR, FATAL
-from distutils.core import Distribution
+from distutils.dist import Distribution
 
 
 class LoggingSilencer(object):

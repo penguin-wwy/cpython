@@ -8,7 +8,7 @@ import os
 import re
 
 from distutils import log
-from distutils.core import Command
+from distutils.cmd import Command
 from distutils.debug import DEBUG
 from distutils.sysconfig import get_config_vars
 from distutils.errors import DistutilsPlatformError

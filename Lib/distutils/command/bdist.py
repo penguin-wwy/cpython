@@ -4,7 +4,7 @@ Implements the Distutils 'bdist' command (create a built [binary]
 distribution)."""
 
 import os
-from distutils.core import Command
+from distutils.cmd import Command
 from distutils.errors import *
 from distutils.util import get_platform
 

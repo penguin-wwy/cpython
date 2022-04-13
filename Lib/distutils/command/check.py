@@ -2,7 +2,7 @@
 
 Implements the Distutils 'check' command.
 """
-from distutils.core import Command
+from distutils.cmd import Command
 from distutils.errors import DistutilsSetupError
 
 try:

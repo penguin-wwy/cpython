@@ -10,7 +10,7 @@ import io
 import urllib.parse, urllib.request
 from warnings import warn
 
-from distutils.core import PyPIRCCommand
+from distutils.config import PyPIRCCommand
 from distutils.errors import *
 from distutils import log
 

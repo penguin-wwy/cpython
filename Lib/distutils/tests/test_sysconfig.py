@@ -254,7 +254,7 @@ class SysconfigTestCase(support.EnvironGuard, unittest.TestCase):
         # get_config_vars().
         with open(TESTFN, 'w') as f:
             f.writelines(textwrap.dedent('''\
-                from distutils.core import Distribution
+                from distutils.dist import Distribution
                 config = Distribution().get_command_obj('config')
                 # try_compile may pass or it may fail if no compiler
                 # is found but it should not raise an exception.

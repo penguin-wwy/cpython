@@ -8,7 +8,7 @@ import contextlib
 import os
 import re
 import sys
-from distutils.core import Command
+from distutils.cmd import Command
 from distutils.errors import *
 from distutils.sysconfig import customize_compiler, get_python_version
 from distutils.sysconfig import get_config_h_filename

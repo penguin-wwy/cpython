@@ -13,7 +13,7 @@ from urllib.error import HTTPError
 from urllib.request import urlopen, Request
 from urllib.parse import urlparse
 from distutils.errors import DistutilsError, DistutilsOptionError
-from distutils.core import PyPIRCCommand
+from distutils.config import PyPIRCCommand
 from distutils.spawn import spawn
 from distutils import log
 

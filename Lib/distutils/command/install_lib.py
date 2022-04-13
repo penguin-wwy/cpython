@@ -7,7 +7,7 @@ import os
 import importlib.util
 import sys
 
-from distutils.core import Command
+from distutils.cmd import Command
 from distutils.errors import DistutilsOptionError
 
 

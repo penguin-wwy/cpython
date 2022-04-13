@@ -5,7 +5,7 @@ distribution -- i.e., just an archive to be unpacked under $prefix or
 $exec_prefix)."""
 
 import os
-from distutils.core import Command
+from distutils.cmd import Command
 from distutils.util import get_platform
 from distutils.dir_util import remove_tree, ensure_relative
 from distutils.errors import *

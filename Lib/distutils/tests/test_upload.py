@@ -8,7 +8,7 @@ from test.support import run_unittest
 
 from distutils.command import upload as upload_mod
 from distutils.command.upload import upload
-from distutils.core import Distribution
+from distutils.dist import Distribution
 from distutils.errors import DistutilsError
 from distutils.log import ERROR, INFO
 

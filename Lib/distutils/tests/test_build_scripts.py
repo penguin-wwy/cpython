@@ -4,7 +4,7 @@ import os
 import unittest
 
 from distutils.command.build_scripts import build_scripts
-from distutils.core import Distribution
+from distutils.dist import Distribution
 from distutils import sysconfig
 
 from distutils.tests import support

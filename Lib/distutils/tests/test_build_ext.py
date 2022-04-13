@@ -3,7 +3,7 @@ import os
 from io import StringIO
 import textwrap
 
-from distutils.core import Distribution
+from distutils.dist import Distribution
 from distutils.command.build_ext import build_ext
 from distutils import sysconfig
 from distutils.tests.support import (TempdirManager, LoggingSilencer,
