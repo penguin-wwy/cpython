@@ -313,7 +313,7 @@ _specializations = {
         "CALL_NO_KW_TUPLE_1",
         "CALL_NO_KW_TYPE_1",
         "CALL_NO_KW_PY_CLASS",
-        # "CALL_NO_KW_PY_CLASS_WITH_INIT",
+        "CALL_NO_KW_PY_CLASS_INIT",
     ],
     "COMPARE_OP": [
         "COMPARE_OP_FLOAT_JUMP",
