@@ -1485,8 +1485,17 @@ specialize_class_call(PyObject *callable, _Py_CODEUNIT *instr, int nargs,
 {
     PyTypeObject *tp = _PyType_CAST(callable);
     if (tp->tp_new == PyBaseObject_Type.tp_new) {
-        SPECIALIZATION_FAIL(CALL, SPEC_FAIL_CALL_PYTHON_CLASS);
-        return -1;
+        assert(tp->tp_vectorcall == NULL);
+        if (kwnames != NULL) {
+            SPECIALIZATION_FAIL(CALL, SPEC_FAIL_CALL_PYTHON_CLASS);
+            return -1;
+        }
+        PyObject *res = _PyType_Lookup(tp, &_Py_ID(__init__));
+        if (res != NULL) {
+            assert(_PyType_HasFeature(Py_TYPE(res), Py_TPFLAGS_METHOD_DESCRIPTOR));
+        }
+        _py_set_opcode(instr, CALL_NO_KW_PY_CLASS);
+        return 0;
     }
     if (tp->tp_flags & Py_TPFLAGS_IMMUTABLETYPE) {
         int oparg = _Py_OPARG(*instr);
