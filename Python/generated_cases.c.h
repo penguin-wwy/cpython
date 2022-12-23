@@ -3297,7 +3297,9 @@
                 res = _Py_CheckFunctionResult(tstate, (PyObject *) tp, res, NULL);
                 if (res != NULL && PyObject_TypeCheck(res, tp) &&
                     tp->tp_init != NULL && tp->tp_init != PyBaseObject_Type.tp_init) {
-                    tp->tp_init(res, argstuple, NULL);
+                    if (tp->tp_init(res, argstuple, NULL) < 0) {
+                        Py_SETREF(res, NULL);
+                    }
                     res = _Py_CheckFunctionResult(tstate, (PyObject *) tp, res, NULL);
                 }
                 _Py_LeaveRecursiveCallTstate(tstate);
