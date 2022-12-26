@@ -3089,13 +3089,16 @@ dummy_func(
                 if (res != NULL && PyObject_TypeCheck(res, tp) &&
                     Py_TYPE(res)->tp_init != NULL && Py_TYPE(res)->tp_init != PyBaseObject_Type.tp_init) {
                     PyObject *init_ref = _PyType_Lookup(Py_TYPE(res), &_Py_ID(__init__));
-                    if (init_ref != NULL && _PyType_HasFeature(Py_TYPE(init_ref), Py_TPFLAGS_METHOD_DESCRIPTOR)) {
+                    if (init_ref != NULL &&
+                        _PyType_HasFeature(Py_TYPE(init_ref), Py_TPFLAGS_METHOD_DESCRIPTOR) &&
+                        _PyType_HasFeature(Py_TYPE(init_ref), Py_TPFLAGS_HAVE_VECTORCALL)) {
+                        vectorcallfunc init_vectorcall = _PyVectorcall_FunctionInline(init_ref);
                         PEEK(oparg + 1) = Py_NewRef(res);
                         Py_DECREF(callable);
-                        PyObject *init_res = _PyObject_VectorcallTstate(tstate, init_ref,
-                                                                        stack_pointer - oparg - 1,
-                                                                        (oparg + 1) | PY_VECTORCALL_ARGUMENTS_OFFSET,
-                                                                        NULL);
+                        PyObject *init_res = init_vectorcall(init_ref,
+                                                             stack_pointer - oparg - 1,
+                                                             (oparg + 1) | PY_VECTORCALL_ARGUMENTS_OFFSET,
+                                                             NULL);
                         if (init_res == NULL) {
                             Py_SETREF(res, NULL);
                         } else if (init_res != Py_None) {
