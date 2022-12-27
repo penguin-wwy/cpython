@@ -3038,42 +3038,6 @@ dummy_func(
         }
 
         // stack effect: (__0, __array[oparg] -- )
-//        inst(CALL_NO_KW_PY_CLASS) {
-//            DEOPT_IF(kwnames != NULL || is_method(stack_pointer, oparg), CALL);
-//            PyObject *callable = PEEK(oparg + 1);
-//            DEOPT_IF(!PyType_Check(callable), CALL);
-//            PyTypeObject *tp = _PyType_CAST(callable);
-//            DEOPT_IF(tp->tp_new != PyBaseObject_Type.tp_new, CALL);
-//            STAT_INC(CALL, hit);
-//            PyObject *argstuple = _PyTuple_FromArray(stack_pointer-oparg, oparg);
-//            PyObject *res = NULL;
-//            if (_Py_EnterRecursiveCallTstate(tstate, " while calling a Python object") == 0) {
-//                res = tp->tp_new(tp, argstuple, NULL);
-//                res = _Py_CheckFunctionResult(tstate, (PyObject *) tp, res, NULL);
-//                if (res != NULL && PyObject_TypeCheck(res, tp) &&
-//                    Py_TYPE(res)->tp_init != NULL && Py_TYPE(res)->tp_init != PyBaseObject_Type.tp_init) {
-//                    if (Py_TYPE(res)->tp_init(res, argstuple, NULL) < 0) {
-//                        Py_SETREF(res, NULL);
-//                    }
-//                    res = _Py_CheckFunctionResult(tstate, (PyObject *) tp, res, NULL);
-//                }
-//                _Py_LeaveRecursiveCallTstate(tstate);
-//            }
-//            Py_DECREF(argstuple);
-//            /* Clear the stack */
-//            STACK_SHRINK(oparg + 1);
-//            for (int i = 0; i < oparg + 1; i++) {
-//                Py_DECREF(stack_pointer[i]);
-//            }
-//            SET_TOP(res);
-//            if (res == NULL) {
-//                goto error;
-//            }
-//            JUMPBY(INLINE_CACHE_ENTRIES_CALL);
-//            CHECK_EVAL_BREAKER();
-//        }
-
-        // stack effect: (__0, __array[oparg] -- )
         inst(CALL_NO_KW_PY_CLASS) {
             DEOPT_IF(kwnames != NULL || is_method(stack_pointer, oparg), CALL);
             PyObject *callable = PEEK(oparg + 1);
