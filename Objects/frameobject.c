@@ -357,6 +357,8 @@ mark_stacks(PyCodeObject *code_obj, int len)
                     assert(stacks[j] == UNINITIALIZED || stacks[j] == next_stack);
                     stacks[j] = next_stack;
                     break;
+                case IS_AND_BRANCH:
+                case CONTAINS_AND_BRANCH:
                 case COMPARE_AND_BRANCH:
                     next_stack = pop_value(pop_value(next_stack));
                     i++;

@@ -1706,6 +1706,32 @@ dummy_func(
             ERROR_IF(res == NULL, error);
         }
 
+        inst(IS_AND_BRANCH, (unused/1, left, right -- )) {
+            int res = Py_Is(left, right) ^ oparg;
+            DECREF_INPUTS();
+            assert(_Py_OPCODE(next_instr[0]) == POP_JUMP_IF_FALSE ||
+                   _Py_OPCODE(next_instr[0]) == POP_JUMP_IF_TRUE);
+            bool jump_on_true = _Py_OPCODE(next_instr[0]) == POP_JUMP_IF_TRUE;
+            int offset = _Py_OPARG(next_instr[0]);
+            if (jump_on_true == (res != 0)) {
+                JUMPBY(offset);
+            }
+        }
+
+        inst(CONTAINS_AND_BRANCH, (unused/1, left, right -- )) {
+            int res = PySequence_Contains(right, left);
+            DECREF_INPUTS();
+            ERROR_IF(res < 0, error);
+            res ^= oparg;
+            assert(_Py_OPCODE(next_instr[0]) == POP_JUMP_IF_FALSE ||
+                   _Py_OPCODE(next_instr[0]) == POP_JUMP_IF_TRUE);
+            bool jump_on_true = _Py_OPCODE(next_instr[0]) == POP_JUMP_IF_TRUE;
+            int offset = _Py_OPARG(next_instr[0]);
+            if (jump_on_true == (res != 0)) {
+                JUMPBY(offset);
+            }
+        }
+
         // No cache size here, since this is a family of super-instructions.
         family(compare_and_branch) = {
             COMPARE_AND_BRANCH,

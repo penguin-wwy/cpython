@@ -210,7 +210,8 @@ def_op('COPY_FREE_VARS', 149)
 def_op('YIELD_VALUE', 150)
 def_op('RESUME', 151)   # This must be kept in sync with deepfreeze.py
 def_op('MATCH_CLASS', 152)
-
+def_op('IS_AND_BRANCH', 153)
+def_op('CONTAINS_AND_BRANCH', 154)
 def_op('FORMAT_VALUE', 155)
 def_op('BUILD_CONST_KEY_MAP', 156)
 def_op('BUILD_STRING', 157)

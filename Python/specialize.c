@@ -317,6 +317,14 @@ _PyCode_Quicken(PyCodeObject *code)
                 instructions[i - 1 - INLINE_CACHE_ENTRIES_COMPARE_OP].oparg = (oparg & 0xf0) | mask;
                 break;
             }
+            case IS_OP << 8 | POP_JUMP_IF_TRUE:
+            case IS_OP << 8 | POP_JUMP_IF_FALSE:
+                instructions[i - 1].opcode = IS_AND_BRANCH;
+                break;
+            case CONTAINS_OP << 8 | POP_JUMP_IF_TRUE:
+            case CONTAINS_OP << 8 | POP_JUMP_IF_FALSE:
+                instructions[i - 1].opcode = CONTAINS_AND_BRANCH;
+                break;
         }
     }
     #endif /* ENABLE_SPECIALIZATION */

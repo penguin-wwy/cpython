@@ -107,6 +107,8 @@ extern "C" {
 #define YIELD_VALUE                            150
 #define RESUME                                 151
 #define MATCH_CLASS                            152
+#define IS_AND_BRANCH                          153
+#define CONTAINS_AND_BRANCH                    154
 #define FORMAT_VALUE                           155
 #define BUILD_CONST_KEY_MAP                    156
 #define BUILD_STRING                           157
@@ -181,12 +183,12 @@ extern "C" {
 #define STORE_ATTR_SLOT                         87
 #define STORE_ATTR_WITH_HINT                   113
 #define STORE_FAST__LOAD_FAST                  143
-#define STORE_FAST__STORE_FAST                 153
-#define STORE_SUBSCR_DICT                      154
-#define STORE_SUBSCR_LIST_INT                  158
-#define UNPACK_SEQUENCE_LIST                   159
-#define UNPACK_SEQUENCE_TUPLE                  160
-#define UNPACK_SEQUENCE_TWO_TUPLE              161
+#define STORE_FAST__STORE_FAST                 158
+#define STORE_SUBSCR_DICT                      159
+#define STORE_SUBSCR_LIST_INT                  160
+#define UNPACK_SEQUENCE_LIST                   161
+#define UNPACK_SEQUENCE_TUPLE                  166
+#define UNPACK_SEQUENCE_TWO_TUPLE              167
 #define DO_TRACING                             255
 
 #define HAS_ARG(op) ((((op) >= HAVE_ARGUMENT) && (!IS_PSEUDO_OPCODE(op)))\

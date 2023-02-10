@@ -2163,6 +2163,44 @@
             DISPATCH();
         }
 
+        TARGET(IS_AND_BRANCH) {
+            PyObject *right = PEEK(1);
+            PyObject *left = PEEK(2);
+            int res = Py_Is(left, right) ^ oparg;
+            Py_DECREF(left);
+            Py_DECREF(right);
+            assert(_Py_OPCODE(next_instr[0]) == POP_JUMP_IF_FALSE ||
+                   _Py_OPCODE(next_instr[0]) == POP_JUMP_IF_TRUE);
+            bool jump_on_true = _Py_OPCODE(next_instr[0]) == POP_JUMP_IF_TRUE;
+            int offset = _Py_OPARG(next_instr[0]);
+            if (jump_on_true == (res != 0)) {
+                JUMPBY(offset);
+            }
+            STACK_SHRINK(2);
+            JUMPBY(1);
+            DISPATCH();
+        }
+
+        TARGET(CONTAINS_AND_BRANCH) {
+            PyObject *right = PEEK(1);
+            PyObject *left = PEEK(2);
+            int res = PySequence_Contains(right, left);
+            Py_DECREF(left);
+            Py_DECREF(right);
+            if (res < 0) goto pop_2_error;
+            res ^= oparg;
+            assert(_Py_OPCODE(next_instr[0]) == POP_JUMP_IF_FALSE ||
+                   _Py_OPCODE(next_instr[0]) == POP_JUMP_IF_TRUE);
+            bool jump_on_true = _Py_OPCODE(next_instr[0]) == POP_JUMP_IF_TRUE;
+            int offset = _Py_OPARG(next_instr[0]);
+            if (jump_on_true == (res != 0)) {
+                JUMPBY(offset);
+            }
+            STACK_SHRINK(2);
+            JUMPBY(1);
+            DISPATCH();
+        }
+
         TARGET(COMPARE_AND_BRANCH) {
             PREDICTED(COMPARE_AND_BRANCH);
             PyObject *right = PEEK(1);

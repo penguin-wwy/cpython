@@ -212,6 +212,10 @@ _PyOpcode_num_popped(int opcode, int oparg, bool jump) {
             return 2;
         case COMPARE_OP:
             return 2;
+        case IS_AND_BRANCH:
+            return 2;
+        case CONTAINS_AND_BRANCH:
+            return 2;
         case COMPARE_AND_BRANCH:
             return 2;
         case COMPARE_AND_BRANCH_FLOAT:
@@ -562,6 +566,10 @@ _PyOpcode_num_pushed(int opcode, int oparg, bool jump) {
             return 0;
         case COMPARE_OP:
             return 1;
+        case IS_AND_BRANCH:
+            return 0;
+        case CONTAINS_AND_BRANCH:
+            return 0;
         case COMPARE_AND_BRANCH:
             return 0;
         case COMPARE_AND_BRANCH_FLOAT:
@@ -818,6 +826,8 @@ const struct opcode_metadata _PyOpcode_opcode_metadata[256] = {
     [STORE_ATTR_WITH_HINT] = { DIR_NONE, DIR_NONE, DIR_NONE, true, INSTR_FMT_IBC000 },
     [STORE_ATTR_SLOT] = { DIR_NONE, DIR_NONE, DIR_NONE, true, INSTR_FMT_IXC000 },
     [COMPARE_OP] = { DIR_NONE, DIR_NONE, DIR_NONE, true, INSTR_FMT_IBC },
+    [IS_AND_BRANCH] = { DIR_NONE, DIR_NONE, DIR_NONE, true, INSTR_FMT_IB },
+    [CONTAINS_AND_BRANCH] = { DIR_NONE, DIR_NONE, DIR_NONE, true, INSTR_FMT_IB },
     [COMPARE_AND_BRANCH] = { DIR_NONE, DIR_NONE, DIR_NONE, true, INSTR_FMT_IBC0 },
     [COMPARE_AND_BRANCH_FLOAT] = { DIR_NONE, DIR_NONE, DIR_NONE, true, INSTR_FMT_IBC0 },
     [COMPARE_AND_BRANCH_INT] = { DIR_NONE, DIR_NONE, DIR_NONE, true, INSTR_FMT_IBC0 },
